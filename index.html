@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Pixi-slider</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/meyer-reset/2.0/reset.min.css">
+  <style>
+    #canvas canvas {
+      display: block;
+      margin: 40px auto 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="canvas"></div>
+</body>
+<script src="//cdnjs.cloudflare.com/ajax/libs/pixi.js/5.0.3/pixi.min.js"></script>
+<script>
+const Particle = {
+  init: function(options) {
+    this.options = options;
+    this.colors = ["0xE5493F","0x55C1FF","0x26B9A0", "0x5A52FF"]
+    this.particles = [];
+    this.maxTime = this.options.frequency * this.options.totalParticles;
+    this.timeToRecreate = false;
+    this.mouse = {
+      x: undefined,
+      y: undefined,
+    };
+
+    this.canvas = document.getElementById(this.options.targetId);
+    this.app = new PIXI.Application({
+      width: this.options.width,
+      height: this.options.height,
+      backgroundColor: '#111111',
+      antialias: true,
+    });
+    this.canvas.appendChild(this.app.view);
+
+    this.container = new PIXI.Container();
+    this.container.interactive = true;
+    this.app.stage.addChild(this.container);
+    this.container.on('mousemove', e => this.mouseAction(e));
+
+    setTimeout(() => {
+      this.timeToRecreate = true;
+    }, this.maxTime);
+    this.generate(this.options.totalParticles);
+    this.update();
+  },
+  generate: function(num) {
+    for (let i = 0; i < num; i++) {
+      setTimeout(() => {
+        this.draw();
+      }, this.options.frequency * i);
+    }
+  },
+  draw: function() {
+    const graphic = this.particleGraphic(this.colors[this.randomIntFromInterval(0, this.colors.length - 1)]);
+    const texture = this.app.renderer.generateTexture(graphic);
+    const spriteParticle = new PIXI.Sprite(texture);
+    spriteParticle.anchor.set(0.5);
+    const size = 0.05 + Math.random() * 0.1;
+    spriteParticle.alpha = Math.random();
+    spriteParticle.scale.x = size;
+    spriteParticle.scale.y = size;
+    spriteParticle.x = (this.options.width / 2) - ((Math.random() * 200) -  (Math.random() * 200));
+    spriteParticle.y = (this.options.height / 2) - ((Math.random() * 200) -  (Math.random() * 200));
+    spriteParticle.a = 0;
+    spriteParticle.s = ((1 + (8 * Math.random())) + (Math.random() * 1))/10;
+    spriteParticle.speed = (Math.floor( Math.random() * 4 ) + 3) / Math.floor((size * 100));
+    this.particles.push(spriteParticle);
+
+    this.particleContainer = new PIXI.ParticleContainer(
+      this.options.totalParticle,
+      {
+        scale: true,
+        position: true,
+      }
+    );
+    this.particleContainer.addChild(spriteParticle);
+    this.container.addChild(this.particleContainer);
+  },
+  particleGraphic: function(type) {
+    const graphic = new PIXI.Graphics();
+    graphic.lineStyle(20, type, 10);
+    graphic.beginFill(0x111111, 0.7);
+    graphic.drawCircle(0, 0, 50);
+    graphic.endFill();
+    return graphic;
+  },
+  randomIntFromInterval(min,max){
+    return Math.floor(Math.random() * (max - min + 1) + min);
+  },
+  move: function() {
+    for(let i = 0; i < this.particles.length; i++) {
+      const particle = this.particles[i];
+      particle.x += Math.cos(particle.a) * particle.s * particle.speed;
+      particle.y += Math.sin(particle.a) * particle.s * particle.speed;
+      particle.a += Math.random() * 0.4 - 0.2;
+      if(particle.x > this.options.width + 10) {
+        particle.x = -5;
+      } else if(particle.x < 0 - 10) {
+        particle.x = this.options.width + 5;
+      } else if(particle.y > this.options.height + 10) {
+        particle.y = -5;
+      } else if(particle.y < 0 - 10) {
+        particle.y = this.options.height + 5;
+      }
+      // mouse interaction
+      if (this.mouse.x - particle.x < 80 && this.mouse.x - particle.x > -80
+      && this.mouse.y - particle.y < 80 && this.mouse.y - particle.y > -80) {
+        particle.x += (this.mouse.x - particle.x) * particle.speed * 0.02;
+        particle.y += (this.mouse.y - particle.y) * particle.speed * 0.02;
+      }
+    }
+  },
+  update: function() {
+    this.move();
+    if (this.timeToRecreate) {
+      if (this.particles.length < this.options.totalParticles) {
+        this.generate(1);
+      }
+    }
+    requestAnimationFrame(this.update.bind(this));
+  },
+  mouseAction: function(e) {
+    this.mouse.x = e.data.global.x;
+    this.mouse.y = e.data.global.y;
+  },
+};
+
+Particle.init({
+  targetId: 'canvas',
+  width: 900,
+  height: 540,
+  totalParticles: 150,
+  frequency: 100,
+});
+</script>
+</html>
